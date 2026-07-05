@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#730717">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Смена+">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Смена+</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root{
+    --ink:#1c2430;
+    --paper:#f2f1ec;
+    --card:#ffffff;
+    --line:#e2e0d6;
+    --muted:#71695c;
+
+    --shift-b:#b5342a;   --shift-f:#f6ddd9;
+    --free-b:#1f5c8c;    --free-f:#dbe8f2;
+    --rest-b:#2f7a4f;    --rest-f:#dcefe1;
+
+    --urgent-b:#c9720b;   --urgent-f:#f7e5cc;
+    --important-b:#4a4e91; --important-f:#e3e3f3;
+    --other-b:#8a8172;    --other-f:#ece9e0;
+  }
+
+  body.dark{
+    --ink:#eef1f5;
+    --paper:#12161d;
+    --card:#1b212b;
+    --line:#2a313d;
+    --muted:#98a1ac;
+
+    --shift-f:#4a2621;
+    --free-f:#1c3147;
+    --rest-f:#1f3c2b;
+
+    --urgent-f:#4a3419;
+    --important-f:#2c2e57;
+    --other-f:#3a362c;
+
+    background:var(--paper);
+  }
+  body.dark .btn{ background:#3a4150; }
+  body.dark .toggle-btn.active{ background:#3a4150; border-color:#3a4150; }
+  body.dark input, body.dark select{
+    background:#232a35; color:var(--ink); border-color:var(--line);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:60px;
+  }
+  header{ padding:24px 20px 14px; border-bottom:1px solid var(--line); background:var(--paper); }
+  header h1{ font-family:'Fraunces', serif; font-weight:600; font-size:26px; margin:0 0 4px; letter-spacing:-0.01em; }
+  header p{ margin:0; color:var(--muted); font-size:13.5px; line-height:1.5; }
+  .wrap{ max-width:720px; margin:0 auto; padding:0 16px; }
+
+  .panel{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px; margin-bottom:16px; }
+  .panel h2{ font-family:'Fraunces', serif; font-size:16px; font-weight:600; margin:0 0 12px; }
+  .panel .sub{ font-size:12px; color:var(--muted); margin:-8px 0 12px; }
+
+  .row{ display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
+  .row label{ font-size:12px; color:var(--muted); display:block; margin-bottom:4px; }
+  .field{ flex:1; min-width:120px; }
+  input[type="date"], input[type="text"], input[type="number"], select{
+    width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:8px;
+    font-family:'IBM Plex Sans', sans-serif; font-size:14px; background:#fff; color:var(--ink);
+  }
+  .btn{ padding:9px 16px; border-radius:8px; border:none; background:var(--ink); color:#fff; font-size:13.5px; font-weight:500; cursor:pointer; }
+  .btn.small{ padding:6px 12px; font-size:12.5px; }
+
+  .shift-list, .plan-list, .goal-list{ display:flex; flex-direction:column; gap:6px; margin-top:10px; }
+  .shift-item, .plan-item{ display:flex; align-items:center; justify-content:space-between; padding:8px 10px; border-radius:8px; background:var(--paper); font-size:13px; gap:8px; }
+  .plan-item .name{ flex:1; }
+  .plan-item select{ width:auto; padding:4px 6px; font-size:12px; }
+  .shift-item button, .plan-item button{ border:none; background:none; color:var(--muted); font-size:16px; cursor:pointer; line-height:1; }
+  .empty-note{ font-size:13px; color:var(--muted); text-align:center; padding:10px 0; }
+
+  .cat-badge{ display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:6px; }
+  .cat-badge.urgent{ background:var(--urgent-b); }
+  .cat-badge.important{ background:var(--important-b); }
+  .cat-badge.other{ background:var(--other-b); }
+
+  .cat-legend{ display:flex; flex-wrap:wrap; gap:10px 16px; font-size:12px; color:var(--muted); margin-top:4px; }
+  .cat-legend span{ display:inline-flex; align-items:center; gap:5px; }
+
+  .goal-card{ border:1.5px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:8px; }
+  .goal-card .top{ display:flex; justify-content:space-between; align-items:center; font-size:13.5px; margin-bottom:6px; }
+  .goal-card .top button{ border:none; background:none; color:var(--muted); font-size:15px; cursor:pointer; }
+  .bar-bg{ height:8px; border-radius:5px; background:var(--paper); overflow:hidden; }
+  .bar-fill{ height:100%; border-radius:5px; background:var(--important-b); }
+  .goal-count{ font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:var(--muted); margin-top:4px; }
+
+  .month-nav{ display:flex; align-items:center; justify-content:space-between; padding:18px 0 12px; }
+  .month-nav button{ border:1px solid var(--line); background:var(--card); border-radius:8px; width:36px; height:36px; font-size:16px; cursor:pointer; color:var(--ink); }
+  .month-nav .label{ font-family:'Fraunces', serif; font-size:19px; font-weight:500; }
+
+  .legend{ display:flex; flex-wrap:wrap; gap:8px 14px; padding:0 0 14px; font-size:12.5px; color:var(--muted); }
+  .legend span{ display:inline-flex; align-items:center; gap:6px; }
+  .dot{ width:12px; height:12px; border-radius:3px; display:inline-block; border:2px solid; }
+  .dot.half{ background:linear-gradient(135deg, var(--free-f) 50%, var(--shift-f) 50%); border-color:var(--shift-b); }
+
+  .grid{ display:grid; grid-template-columns:repeat(7, 1fr); gap:6px; margin-bottom:8px; }
+  .dow{ text-align:center; font-size:11px; letter-spacing:0.04em; text-transform:uppercase; color:var(--muted); padding-bottom:4px; }
+  .day{
+    aspect-ratio:1; border-radius:10px; border:2px solid; padding:5px 4px 3px;
+    display:flex; flex-direction:column; justify-content:space-between;
+    cursor:pointer; position:relative; transition:transform .12s ease; color:var(--ink);
+  }
+  .day:active{ transform:scale(0.95); }
+  .day.empty{ visibility:hidden; border:none; }
+  .day .num{ font-size:12.5px; font-weight:600; }
+  .day.selected{ outline:2px solid var(--ink); outline-offset:1px; }
+
+  .day.shift{ background:var(--shift-f); border-color:var(--shift-b); }
+  .day.free{ background:var(--free-f); border-color:var(--free-b); }
+  .day.rest{ background:var(--rest-f); border-color:var(--rest-b); }
+  .day.night{ background:linear-gradient(135deg, var(--free-f) 50%, var(--shift-f) 50%); border-color:var(--shift-b); }
+
+  .day .icons{ display:flex; gap:2px; font-size:10px; align-items:center; }
+  .day .icons .ic{ opacity:0.3; }
+  .day .icons .ic.on{ opacity:1; }
+  .day .progress{ font-size:9.5px; font-family:'IBM Plex Mono', monospace; opacity:0.9; font-weight:600; }
+  .day .progress.done{ color:var(--rest-b); }
+  .day .progress.empty-plan{ opacity:0.3; font-weight:400; }
+
+  .cal-hint{ text-align:center; font-size:12px; color:var(--muted); margin-bottom:22px; }
+
+  .detail{ display:none; }
+  .detail.open{ display:block; }
+  .detail-date{ font-family:'Fraunces', serif; font-size:17px; margin-bottom:12px; }
+  .toggle-row{ display:flex; gap:10px; margin-bottom:14px; }
+  .toggle-btn{ flex:1; padding:10px 8px; border-radius:10px; border:1px solid var(--line); background:var(--paper); font-size:13px; text-align:center; cursor:pointer; }
+  .toggle-btn.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
+
+  .section-title{ font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin:14px 0 6px; }
+  .plan-check{ display:flex; align-items:center; gap:10px; padding:8px 4px; border-bottom:1px solid var(--line); font-size:14px; }
+  .plan-check:last-child{ border-bottom:none; }
+  .plan-check input{ width:17px; height:17px; }
+  .plan-check.done{ color:var(--muted); text-decoration:line-through; }
+  .plan-check .remove-daily{ margin-left:auto; border:none; background:none; color:var(--muted); font-size:15px; cursor:pointer; }
+
+  .add-row{ display:flex; align-items:center; gap:10px; padding:7px 4px; font-size:13.5px; }
+  .add-row button{ margin-left:auto; border:1px solid var(--line); background:var(--paper); border-radius:6px; padding:4px 10px; font-size:12px; cursor:pointer; }
+
+  .stat-line{ font-family:'IBM Plex Mono', monospace; font-size:13px; color:var(--muted); }
+  .stat-line b{ color:var(--ink); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap" style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+    <div>
+      <h1>Смена+</h1>
+      <p>Каждый день — свой короткий список. Прогресс считается по нему, а не по всем планам сразу.</p>
+    </div>
+    <button id="themeToggle" class="btn small" style="white-space:nowrap;">🌙 Тема</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="month-nav" style="margin-top:18px;">
+    <button id="prevMonth">‹</button>
+    <div class="label" id="monthLabel"></div>
+    <button id="nextMonth">›</button>
+  </div>
+
+  <div class="legend">
+    <span><span class="dot" style="background:var(--shift-f); border-color:var(--shift-b);"></span>Сутки</span>
+    <span><span class="dot half"></span>Ночная</span>
+    <span><span class="dot" style="background:var(--rest-f); border-color:var(--rest-b);"></span>Восстановление</span>
+    <span><span class="dot" style="background:var(--free-f); border-color:var(--free-b);"></span>Свободно</span>
+    <span>💧 вода</span>
+    <span>🥬 питание</span>
+  </div>
+
+  <div class="grid" id="dowRow"></div>
+  <div class="grid" id="calGrid"></div>
+  <div class="cal-hint">Нажмите на день, чтобы собрать список дел на него</div>
+
+  <div class="panel detail" id="detailPanel">
+    <div class="detail-date" id="detailDate"></div>
+    <div class="toggle-row">
+      <div class="toggle-btn" id="waterToggle">💧 Вода</div>
+      <div class="toggle-btn" id="foodToggle">🥬 Питание</div>
+    </div>
+
+    <div class="section-title">Список на этот день</div>
+    <div id="dailyList"></div>
+
+    <div class="section-title">Добавить в список дня</div>
+    <div id="addToDaily"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Ресурс месяца</h2>
+    <div class="stat-line" id="statLine"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Главное на неделю</h2>
+    <p class="sub">Неделя считается с понедельника по воскресенье</p>
+    <div class="row">
+      <div class="field"><select id="weekGoalPlan"></select></div>
+      <div class="field" style="max-width:90px;"><input type="number" id="weekGoalTarget" placeholder="раз" min="1"></div>
+      <button class="btn small" id="addWeekGoalBtn">Закрепить</button>
+    </div>
+    <div class="goal-list" id="weekGoalList"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Главное на месяц</h2>
+    <p class="sub">Выберите план и сколько раз в этом месяце его нужно сделать</p>
+    <div class="row">
+      <div class="field"><select id="monthGoalPlan"></select></div>
+      <div class="field" style="max-width:90px;"><input type="number" id="monthGoalTarget" placeholder="раз" min="1"></div>
+      <button class="btn small" id="addMonthGoalBtn">Закрепить</button>
+    </div>
+    <div class="goal-list" id="monthGoalList"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Мои планы</h2>
+    <div class="cat-legend">
+      <span><span class="cat-badge urgent"></span>Реанимация — важно и срочно</span>
+      <span><span class="cat-badge important"></span>Профилактика — важно, не срочно</span>
+      <span><span class="cat-badge other"></span>Наблюдение — остальное</span>
+    </div>
+    <div class="row" style="margin-top:12px;">
+      <div class="field"><input type="text" id="newPlanName" placeholder="Название плана"></div>
+      <div class="field" style="max-width:160px;">
+        <select id="newPlanCat">
+          <option value="urgent">Реанимация</option>
+          <option value="important" selected>Профилактика</option>
+          <option value="other">Наблюдение</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn small" id="addPlanBtn">Добавить план</button>
+    <div class="plan-list" id="planList"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Добавить смену</h2>
+    <div class="row">
+      <div class="field"><label>Дата</label><input type="date" id="shiftDate"></div>
+      <div class="field"><label>Тип</label>
+        <select id="shiftType">
+          <option value="shift">Сутки</option>
+          <option value="night">Ночная</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn" id="addShiftBtn">Добавить смену</button>
+    <div class="shift-list" id="shiftList"></div>
+  </div>
+
+</div>
+
+<script>
+// Локальное хранилище на этом телефоне (вместо Claude storage)
+const storage = {
+  async get(key){
+    const v = localStorage.getItem(key);
+    if(v === null) throw new Error('not found');
+    return { key, value: v };
+  },
+  async set(key, value){
+    localStorage.setItem(key, value);
+    return { key, value };
+  },
+  async delete(key){
+    localStorage.removeItem(key);
+    return { key, deleted: true };
+  }
+};
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+<script>
+const DOW = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+const CAT_LABEL = {urgent:'Реанимация', important:'Профилактика', other:'Наблюдение'};
+let shifts = {};
+let plans = [];
+let dayData = {};       // date -> {selected:[planId], done:{planId:bool}, water:bool, food:bool}
+let monthGoals = [];
+let weekGoals = [];
+let viewYear = 2026, viewMonth = 6;
+let selectedDate = null;
+
+function pad(n){ return String(n).padStart(2,'0'); }
+function iso(y,m,d){ return `${y}-${pad(m+1)}-${pad(d)}`; }
+function uid(){ return 'p' + Math.random().toString(36).slice(2,9); }
+
+async function loadState(){
+  try{ const s = await storage.get('shifts_v4', false); if(s?.value) shifts = JSON.parse(s.value); }catch(e){}
+  if(Object.keys(shifts).length === 0){
+    shifts = { '2026-07-06':'shift','2026-07-11':'shift','2026-07-14':'shift','2026-07-21':'shift','2026-07-25':'night' };
+    saveShifts();
+  }
+  try{ const p = await storage.get('plans_v4', false); if(p?.value) plans = JSON.parse(p.value); }catch(e){}
+  try{ const d = await storage.get('daydata_v4', false); if(d?.value) dayData = JSON.parse(d.value); }catch(e){}
+  try{ const mg = await storage.get('monthgoals_v4', false); if(mg?.value) monthGoals = JSON.parse(mg.value); }catch(e){}
+  try{ const wg = await storage.get('weekgoals_v4', false); if(wg?.value) weekGoals = JSON.parse(wg.value); }catch(e){}
+}
+
+async function saveShifts(){ try{ await storage.set('shifts_v4', JSON.stringify(shifts), false); }catch(e){} }
+async function savePlans(){ try{ await storage.set('plans_v4', JSON.stringify(plans), false); }catch(e){} }
+async function saveDayData(){ try{ await storage.set('daydata_v4', JSON.stringify(dayData), false); }catch(e){} }
+async function saveMonthGoals(){ try{ await storage.set('monthgoals_v4', JSON.stringify(monthGoals), false); }catch(e){} }
+async function saveWeekGoals(){ try{ await storage.set('weekgoals_v4', JSON.stringify(weekGoals), false); }catch(e){} }
+
+function getDay(dateStr){
+  if(!dayData[dateStr]) dayData[dateStr] = {selected:[], done:{}, water:false, food:false};
+  if(!dayData[dateStr].selected) dayData[dateStr].selected = [];
+  if(!dayData[dateStr].done) dayData[dateStr].done = {};
+  return dayData[dateStr];
+}
+
+function dateStatus(dateStr){
+  if(shifts[dateStr] === 'shift') return {cls:'shift', label:'Сутки — рабочий день'};
+  if(shifts[dateStr] === 'night') return {cls:'night', label:'Ночная смена'};
+  const d = new Date(dateStr + 'T00:00:00');
+  const prev = new Date(d); prev.setDate(prev.getDate()-1);
+  const prevStr = iso(prev.getFullYear(), prev.getMonth(), prev.getDate());
+  if(shifts[prevStr]) return {cls:'rest', label:'Восстановление после смены'};
+  return {cls:'free', label:'Свободный день'};
+}
+
+function planName(id){ const p = plans.find(x=>x.id===id); return p ? p.name : '(удалён)'; }
+
+function countInRange(planId, startStr, endStr){
+  let c = 0;
+  for(const [date, dd] of Object.entries(dayData)){
+    if(date >= startStr && date <= endStr && dd.done && dd.done[planId]) c++;
+  }
+  return c;
+}
+
+function currentMonthRange(){
+  const start = iso(viewYear, viewMonth, 1);
+  const end = iso(viewYear, viewMonth, new Date(viewYear, viewMonth+1, 0).getDate());
+  return [start, end];
+}
+function currentWeekRange(){
+  const today = new Date();
+  const dow = (today.getDay()+6)%7;
+  const monday = new Date(today); monday.setDate(today.getDate()-dow);
+  const sunday = new Date(monday); sunday.setDate(monday.getDate()+6);
+  return [iso(monday.getFullYear(),monday.getMonth(),monday.getDate()), iso(sunday.getFullYear(),sunday.getMonth(),sunday.getDate())];
+}
+
+function renderDowRow(){ document.getElementById('dowRow').innerHTML = DOW.map(d => `<div class="dow">${d}</div>`).join(''); }
+
+function renderCalendar(){
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+  const first = new Date(viewYear, viewMonth, 1);
+  const startDow = (first.getDay() + 6) % 7;
+  const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+  const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+  document.getElementById('monthLabel').textContent = `${monthNames[viewMonth]} ${viewYear}`;
+
+  for(let i=0;i<startDow;i++){ const e=document.createElement('div'); e.className='day empty'; grid.appendChild(e); }
+
+  let counts = {shift:0, night:0, rest:0, free:0};
+  for(let day=1; day<=daysInMonth; day++){
+    const dateStr = iso(viewYear, viewMonth, day);
+    const status = dateStatus(dateStr);
+    counts[status.cls]++;
+    const dd = getDay(dateStr);
+    const total = dd.selected.length;
+    const done = dd.selected.filter(id => dd.done[id]).length;
+
+    let progressHTML = '';
+    if(total === 0) progressHTML = '<span class="progress empty-plan">—</span>';
+    else if(done === total) progressHTML = '<span class="progress done">✓</span>';
+    else progressHTML = `<span class="progress">${done}/${total}</span>`;
+
+    const cell = document.createElement('div');
+    cell.className = `day ${status.cls}` + (dateStr === selectedDate ? ' selected' : '');
+    cell.innerHTML = `
+      <div class="num">${day}</div>
+      <div class="icons"><span class="ic ${dd.water?'on':''}">💧</span><span class="ic ${dd.food?'on':''}">🥬</span></div>
+      ${progressHTML}
+    `;
+    cell.title = status.label;
+    cell.onclick = () => { selectedDate = dateStr; renderCalendar(); renderDetail(); };
+    grid.appendChild(cell);
+  }
+
+  document.getElementById('statLine').innerHTML =
+    `Рабочих смен: <b>${counts.shift + counts.night}</b> · Восстановления: <b>${counts.rest}</b> · Свободных: <b>${counts.free}</b> из ${daysInMonth}`;
+
+  renderGoalOptions();
+  renderMonthGoals();
+  renderWeekGoals();
+}
+
+function renderDetail(){
+  const panel = document.getElementById('detailPanel');
+  if(!selectedDate){ panel.classList.remove('open'); return; }
+  panel.classList.add('open');
+  const [y,m,d] = selectedDate.split('-');
+  document.getElementById('detailDate').textContent = `${d}.${m}.${y}`;
+  const dd = getDay(selectedDate);
+
+  const waterBtn = document.getElementById('waterToggle');
+  const foodBtn = document.getElementById('foodToggle');
+  waterBtn.classList.toggle('active', dd.water);
+  foodBtn.classList.toggle('active', dd.food);
+  waterBtn.onclick = async () => { dd.water = !dd.water; await saveDayData(); renderDetail(); renderCalendar(); };
+  foodBtn.onclick = async () => { dd.food = !dd.food; await saveDayData(); renderDetail(); renderCalendar(); };
+
+  const dailyList = document.getElementById('dailyList');
+  if(dd.selected.length === 0){
+    dailyList.innerHTML = '<div class="empty-note">Список пуст — добавьте задачи ниже</div>';
+  } else {
+    dailyList.innerHTML = dd.selected.map(id => {
+      const p = plans.find(x => x.id === id);
+      const name = p ? p.name : '(план удалён)';
+      const cat = p ? p.cat : 'other';
+      const isDone = !!dd.done[id];
+      return `<div class="plan-check ${isDone ? 'done' : ''}">
+        <input type="checkbox" data-plan="${id}" class="doneCheck" ${isDone ? 'checked' : ''}>
+        <span class="cat-badge ${cat}"></span>
+        <span>${name}</span>
+        <button class="remove-daily" data-plan="${id}">✕</button>
+      </div>`;
+    }).join('');
+    dailyList.querySelectorAll('.doneCheck').forEach(cb => {
+      cb.onchange = async () => { dd.done[cb.dataset.plan] = cb.checked; await saveDayData(); renderDetail(); renderCalendar(); };
+    });
+    dailyList.querySelectorAll('.remove-daily').forEach(btn => {
+      btn.onclick = async () => {
+        dd.selected = dd.selected.filter(id => id !== btn.dataset.plan);
+        delete dd.done[btn.dataset.plan];
+        await saveDayData(); renderDetail(); renderCalendar();
+      };
+    });
+  }
+
+  const addList = document.getElementById('addToDaily');
+  const available = plans.filter(p => !dd.selected.includes(p.id));
+  if(available.length === 0){
+    addList.innerHTML = '<div class="empty-note">Все планы уже в списке дня</div>';
+  } else {
+    addList.innerHTML = available.map(p => `
+      <div class="add-row">
+        <span class="cat-badge ${p.cat}"></span>
+        <span>${p.name}</span>
+        <button data-plan="${p.id}" class="addDaily">+ добавить</button>
+      </div>
+    `).join('');
+    addList.querySelectorAll('.addDaily').forEach(btn => {
+      btn.onclick = async () => {
+        dd.selected.push(btn.dataset.plan);
+        await saveDayData(); renderDetail(); renderCalendar();
+      };
+    });
+  }
+}
+
+function renderShiftList(){
+  const list = document.getElementById('shiftList');
+  const entries = Object.entries(shifts).sort();
+  if(entries.length === 0){ list.innerHTML = '<div class="empty-note">Смен пока нет</div>'; return; }
+  list.innerHTML = entries.map(([date, type]) => {
+    const label = type === 'shift' ? 'Сутки' : 'Ночная';
+    const [y,m,d] = date.split('-');
+    return `<div class="shift-item"><span>${d}.${m}.${y} — ${label}</span><button data-date="${date}" class="removeShift">✕</button></div>`;
+  }).join('');
+  list.querySelectorAll('.removeShift').forEach(btn => {
+    btn.onclick = async () => { delete shifts[btn.dataset.date]; await saveShifts(); renderAll(); };
+  });
+}
+
+function renderPlanList(){
+  const list = document.getElementById('planList');
+  if(plans.length === 0){ list.innerHTML = '<div class="empty-note">Планов пока нет</div>'; return; }
+  list.innerHTML = plans.map(p => `
+    <div class="plan-item">
+      <span class="cat-badge ${p.cat}"></span>
+      <span class="name">${p.name}</span>
+      <select data-id="${p.id}" class="catSelect">
+        <option value="urgent" ${p.cat==='urgent'?'selected':''}>Реанимация</option>
+        <option value="important" ${p.cat==='important'?'selected':''}>Профилактика</option>
+        <option value="other" ${p.cat==='other'?'selected':''}>Наблюдение</option>
+      </select>
+      <button data-id="${p.id}" class="removePlan">✕</button>
+    </div>
+  `).join('');
+  list.querySelectorAll('.catSelect').forEach(sel => {
+    sel.onchange = async () => {
+      const p = plans.find(x=>x.id===sel.dataset.id);
+      if(p){ p.cat = sel.value; await savePlans(); renderAll(); }
+    };
+  });
+  list.querySelectorAll('.removePlan').forEach(btn => {
+    btn.onclick = async () => {
+      const id = btn.dataset.id;
+      plans = plans.filter(p => p.id !== id);
+      monthGoals = monthGoals.filter(g => g.planId !== id);
+      weekGoals = weekGoals.filter(g => g.planId !== id);
+      for(const dd of Object.values(dayData)){
+        dd.selected = (dd.selected||[]).filter(pid => pid !== id);
+        if(dd.done) delete dd.done[id];
+      }
+      await savePlans(); await saveMonthGoals(); await saveWeekGoals(); await saveDayData();
+      renderAll();
+    };
+  });
+}
+
+function renderGoalOptions(){
+  const mSel = document.getElementById('monthGoalPlan');
+  const wSel = document.getElementById('weekGoalPlan');
+  const opts = plans.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  mSel.innerHTML = opts; wSel.innerHTML = opts;
+}
+
+function renderMonthGoals(){
+  const list = document.getElementById('monthGoalList');
+  if(monthGoals.length === 0){ list.innerHTML = '<div class="empty-note">Пока нет закреплённых целей месяца</div>'; return; }
+  const [start,end] = currentMonthRange();
+  list.innerHTML = monthGoals.map(g => {
+    const done = countInRange(g.planId, start, end);
+    const pct = Math.min(100, Math.round(done/g.target*100));
+    return `<div class="goal-card">
+      <div class="top"><span>${planName(g.planId)}</span><button data-id="${g.id}" class="removeMonthGoal">✕</button></div>
+      <div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div>
+      <div class="goal-count">${done} / ${g.target} за месяц</div>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.removeMonthGoal').forEach(btn => {
+    btn.onclick = async () => { monthGoals = monthGoals.filter(g => g.id !== btn.dataset.id); await saveMonthGoals(); renderMonthGoals(); };
+  });
+}
+
+function renderWeekGoals(){
+  const list = document.getElementById('weekGoalList');
+  if(weekGoals.length === 0){ list.innerHTML = '<div class="empty-note">Пока нет закреплённых целей недели</div>'; return; }
+  const [start,end] = currentWeekRange();
+  list.innerHTML = weekGoals.map(g => {
+    const done = countInRange(g.planId, start, end);
+    const pct = Math.min(100, Math.round(done/g.target*100));
+    return `<div class="goal-card">
+      <div class="top"><span>${planName(g.planId)}</span><button data-id="${g.id}" class="removeWeekGoal">✕</button></div>
+      <div class="bar-bg"><div class="bar-fill" style="width:${pct}%; background:var(--urgent-b);"></div></div>
+      <div class="goal-count">${done} / ${g.target} за неделю</div>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.removeWeekGoal').forEach(btn => {
+    btn.onclick = async () => { weekGoals = weekGoals.filter(g => g.id !== btn.dataset.id); await saveWeekGoals(); renderWeekGoals(); };
+  });
+}
+
+function renderAll(){
+  renderDowRow(); renderCalendar(); renderShiftList(); renderPlanList(); renderDetail();
+}
+
+document.getElementById('addShiftBtn').onclick = async () => {
+  const date = document.getElementById('shiftDate').value;
+  const type = document.getElementById('shiftType').value;
+  if(!date) return;
+  shifts[date] = type; await saveShifts();
+  document.getElementById('shiftDate').value = '';
+  renderAll();
+};
+
+document.getElementById('addPlanBtn').onclick = async () => {
+  const input = document.getElementById('newPlanName');
+  const cat = document.getElementById('newPlanCat').value;
+  const name = input.value.trim();
+  if(!name) return;
+  plans.push({id: uid(), name, cat});
+  await savePlans();
+  input.value = '';
+  renderAll();
+};
+
+document.getElementById('addMonthGoalBtn').onclick = async () => {
+  const planId = document.getElementById('monthGoalPlan').value;
+  const target = parseInt(document.getElementById('monthGoalTarget').value);
+  if(!planId || !target) return;
+  monthGoals.push({id: uid(), planId, target});
+  await saveMonthGoals();
+  document.getElementById('monthGoalTarget').value = '';
+  renderMonthGoals();
+};
+
+document.getElementById('addWeekGoalBtn').onclick = async () => {
+  const planId = document.getElementById('weekGoalPlan').value;
+  const target = parseInt(document.getElementById('weekGoalTarget').value);
+  if(!planId || !target) return;
+  weekGoals.push({id: uid(), planId, target});
+  await saveWeekGoals();
+  document.getElementById('weekGoalTarget').value = '';
+  renderWeekGoals();
+};
+
+document.getElementById('prevMonth').onclick = () => { viewMonth--; if(viewMonth<0){viewMonth=11;viewYear--;} renderCalendar(); };
+document.getElementById('nextMonth').onclick = () => { viewMonth++; if(viewMonth>11){viewMonth=0;viewYear++;} renderCalendar(); };
+
+async function loadTheme(){
+  let theme = 'light';
+  try{ const t = await storage.get('theme_v1', false); if(t?.value) theme = t.value; }catch(e){}
+  applyTheme(theme);
+}
+function applyTheme(theme){
+  document.body.classList.toggle('dark', theme === 'dark');
+  document.getElementById('themeToggle').textContent = theme === 'dark' ? '☀️ Тема' : '🌙 Тема';
+}
+document.getElementById('themeToggle').onclick = async () => {
+  const next = document.body.classList.contains('dark') ? 'light' : 'dark';
+  applyTheme(next);
+  try{ await storage.set('theme_v1', next, false); }catch(e){}
+};
+
+(async () => {
+  await loadTheme();
+  await loadState();
+  renderAll();
+})();
+</script>
+
+</body>
+</html>
