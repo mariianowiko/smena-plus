@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Смена+">
 <meta name="theme-color" content="#730717">
@@ -52,13 +55,16 @@
   }
 
   *{box-sizing:border-box;}
+  html{ overflow-x:hidden; width:100%; }
   body{
     margin:0; background:var(--paper); color:var(--ink);
     font-family:'IBM Plex Sans', sans-serif;
     -webkit-font-smoothing:antialiased;
     padding-bottom:60px;
+    overflow-x:hidden;
+    width:100%;
   }
-  header{ padding:24px 20px 14px; border-bottom:1px solid var(--line); background:var(--paper); }
+  header{ padding:24px 0 14px; border-bottom:1px solid var(--line); background:var(--paper); }
   header h1{ font-family:'Fraunces', serif; font-weight:600; font-size:26px; margin:0 0 4px; letter-spacing:-0.01em; }
   header p{ margin:0; color:var(--muted); font-size:13.5px; line-height:1.5; }
   .wrap{ max-width:720px; margin:0 auto; padding:0 16px; }
@@ -74,11 +80,11 @@
     width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:8px;
     font-family:'IBM Plex Sans', sans-serif; font-size:14px; background:#fff; color:var(--ink);
   }
-  .btn{ padding:9px 16px; border-radius:8px; border:none; background:var(--ink); color:#fff; font-size:13.5px; font-weight:500; cursor:pointer; }
+  .btn{ padding:9px 16px; border-radius:8px; border:none; background:var(--muted); color:#fff; font-size:13.5px; font-weight:500; cursor:pointer; }
   .btn.small{ padding:6px 12px; font-size:12.5px; }
 
   .shift-list, .plan-list, .goal-list{ display:flex; flex-direction:column; gap:6px; margin-top:10px; }
-  .shift-item, .plan-item{ display:flex; align-items:center; justify-content:space-between; padding:8px 10px; border-radius:8px; background:var(--paper); font-size:13px; gap:8px; }
+  .shift-item, .plan-item{ display:flex; align-items:center; justify-content:space-between; padding:8px 10px; border-radius:8px; background:var(--paper); font-size:13px; gap:8px; flex-wrap:wrap; }
   .plan-item .name{ flex:1; }
   .plan-item select{ width:auto; padding:4px 6px; font-size:12px; }
   .shift-item button, .plan-item button{ border:none; background:none; color:var(--muted); font-size:16px; cursor:pointer; line-height:1; }
@@ -115,7 +121,7 @@
   .dot.half-day .dtri-a{ background:var(--shift-f); border-color:var(--shift-b); }
   .dot.half-day .dtri-b{ background:var(--rest-f); border-color:var(--rest-b); }
 
-  .grid{ display:grid; grid-template-columns:repeat(7, 1fr); gap:6px; margin-bottom:8px; }
+  .grid{ display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:6px; margin-bottom:8px; width:100%; }
   .dow{ text-align:center; font-size:11px; letter-spacing:0.04em; text-transform:uppercase; color:var(--muted); padding-bottom:4px; }
   .day{
     aspect-ratio:1; border-radius:10px; border:2px solid; padding:5px 4px 3px;
@@ -157,8 +163,8 @@
   .detail{ display:none; }
   .detail.open{ display:block; }
   .detail-date{ font-family:'Fraunces', serif; font-size:17px; margin-bottom:12px; }
-  .toggle-row{ display:flex; gap:10px; margin-bottom:14px; }
-  .toggle-btn{ flex:1; padding:10px 8px; border-radius:10px; border:1px solid var(--line); background:var(--paper); font-size:13px; text-align:center; cursor:pointer; }
+  .toggle-row{ display:flex; flex-wrap:wrap; gap:10px; margin-bottom:14px; }
+  .toggle-btn{ flex:1; min-width:88px; padding:10px 8px; border-radius:10px; border:1px solid var(--line); background:var(--paper); font-size:13px; text-align:center; cursor:pointer; }
   .toggle-btn.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
 
   .section-title{ font-size:13px; font-style:italic; color:var(--muted); margin:14px 0 6px; }
@@ -455,8 +461,12 @@ function suggestDaysForPlan(planId, target){
     const st = dateStatus(d).cls;
     return st !== 'shift' && st !== 'rest'; // сутки и восстановление исключаем
   };
-  let freeDates = weekDates.filter(d => d >= today && !plannedDates.includes(d) && isUsable(d));
-  // если хороших дней не хватает — лучше показать честно меньше вариантов, чем ставить на сутки/отдых
+  const notCrowded = (d) => (getDay(d).selected||[]).length < 4;
+
+  const candidates = weekDates.filter(d => d >= today && !plannedDates.includes(d) && isUsable(d));
+  let freeDates = candidates.filter(notCrowded);
+  // если на всех подходящих днях уже по 4 дела — предлагаем любой из них, не блокируем
+  if(freeDates.length === 0) freeDates = candidates;
   if(freeDates.length === 0) return [];
   if(freeDates.length <= remaining) return freeDates;
   const step = freeDates.length / remaining;
@@ -555,11 +565,13 @@ function renderDetail(){
   if(dd.selected.length === 0){
     dailyList.innerHTML = '<div class="empty-note">Список пуст — добавьте задачи ниже</div>';
   } else {
-    dailyList.innerHTML = dd.selected.map(id => {
-      const p = plans.find(x => x.id === id);
-      const name = p ? p.name : '(план удалён)';
-      const cat = p ? p.cat : 'other';
-      const typeTag = p && p.type === 'oneoff' ? ' <span style="color:var(--muted);font-size:11px;">· разовая</span>' : '';
+    const selectedPlans = dd.selected.map(id => plans.find(x => x.id === id) || {id, name:'(план удалён)', cat:'other'});
+    const sortedSelected = getSortedPlans(selectedPlans);
+    dailyList.innerHTML = sortedSelected.map(p => {
+      const id = p.id;
+      const name = p.name;
+      const cat = p.cat;
+      const typeTag = p.type === 'oneoff' ? ' <span style="color:var(--muted);font-size:11px;">· разовая</span>' : '';
       const isDone = !!dd.done[id];
       return `<div class="plan-check ${isDone ? 'done' : ''}">
         <input type="checkbox" data-plan="${id}" class="doneCheck" ${isDone ? 'checked' : ''}>
@@ -626,14 +638,14 @@ function renderShiftList(){
 }
 
 const CAT_RANK = {urgent:0, important:1, other:2};
-function getSortedPlans(){
-  const arr = [...plans];
+function getSortedPlans(list){
+  const arr = [...(list || plans)];
   if(planSortMode === 'alpha'){
     arr.sort((a,b) => a.name.localeCompare(b.name, 'ru'));
   } else if(planSortMode === 'newest'){
     arr.sort((a,b) => (b.order||0) - (a.order||0));
   } else {
-    arr.sort((a,b) => (CAT_RANK[a.cat]-CAT_RANK[b.cat]) || (a.order||0)-(b.order||0));
+    arr.sort((a,b) => (CAT_RANK[a.cat]-CAT_RANK[b.cat]) || a.name.localeCompare(b.name, 'ru'));
   }
   return arr;
 }
@@ -647,7 +659,10 @@ function renderPlanList(){
   list.innerHTML = getSortedPlans().map(p => `
     <div class="plan-item">
       <span class="cat-badge ${p.cat}"></span>
-      <span class="name">${p.name}${p.type==='recurring' ? ` <span style="color:var(--muted);font-size:11px;">· ×${p.weeklyTarget||1}/нед</span>` : ' <span style="color:var(--muted);font-size:11px;">· разовая</span>'}</span>
+      <span class="name">${p.name}</span>
+      ${p.type==='recurring'
+        ? `<span style="display:flex;align-items:center;gap:3px;font-size:11px;color:var(--muted);white-space:nowrap;">×<input type="number" min="1" value="${p.weeklyTarget||1}" data-id="${p.id}" class="targetEdit" style="width:38px;padding:3px 4px;font-size:11px;">/нед</span>`
+        : '<span style="color:var(--muted);font-size:11px;white-space:nowrap;">· разовая</span>'}
       <button data-id="${p.id}" class="quickAddPlan" title="Добавить на ${targetDate === todayStr() ? 'сегодня' : 'выбранный день'}">+</button>
       <select data-id="${p.id}" class="catSelect">
         <option value="urgent" ${p.cat==='urgent'?'selected':''}>Реанимация</option>
@@ -657,6 +672,13 @@ function renderPlanList(){
       <button data-id="${p.id}" class="removePlan">✕</button>
     </div>
   `).join('');
+  list.querySelectorAll('.targetEdit').forEach(inp => {
+    inp.onchange = async () => {
+      const p = plans.find(x=>x.id===inp.dataset.id);
+      const val = parseInt(inp.value);
+      if(p && val > 0){ p.weeklyTarget = val; await savePlans(); renderGoalStats(); }
+    };
+  });
   list.querySelectorAll('.quickAddPlan').forEach(btn => {
     btn.onclick = async () => {
       const dd = getDay(targetDate);
@@ -690,7 +712,7 @@ function renderPlanList(){
 
 function renderGoalStats(){
   const list = document.getElementById('goalStatsList');
-  const recurring = plans.filter(p => p.type === 'recurring');
+  const recurring = getSortedPlans(plans.filter(p => p.type === 'recurring'));
   if(recurring.length === 0){
     list.innerHTML = '<div class="empty-note">Добавьте повторяющийся план, чтобы видеть статистику</div>';
     return;
