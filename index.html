@@ -105,9 +105,15 @@
 
   .legend{ display:flex; flex-wrap:wrap; gap:8px 14px; padding:0 0 14px; font-size:12.5px; color:var(--muted); }
   .legend span{ display:inline-flex; align-items:center; gap:6px; }
-  .dot{ width:12px; height:12px; border-radius:3px; display:inline-block; border:2px solid; }
-  .dot.half{ background:linear-gradient(135deg, var(--free-f) 50%, var(--shift-f) 50%); border-color:var(--shift-b); }
-  .dot.half-day{ background:linear-gradient(135deg, var(--shift-f) 50%, var(--free-f) 50%); border-color:var(--shift-b); }
+  .dot{ width:12px; height:12px; border-radius:3px; display:inline-block; border:2px solid; position:relative; box-sizing:border-box; }
+  .dot.split{ border:none; }
+  .dot.split .dtri{ position:absolute; inset:0; border-radius:3px; border:1.5px solid; box-sizing:border-box; }
+  .dot.split .dtri-a{ clip-path: polygon(0 0, 100% 0, 0 100%); }
+  .dot.split .dtri-b{ clip-path: polygon(100% 0, 100% 100%, 0 100%); }
+  .dot.half .dtri-a{ background:var(--free-f); border-color:var(--free-b); }
+  .dot.half .dtri-b{ background:var(--shift-f); border-color:var(--shift-b); }
+  .dot.half-day .dtri-a{ background:var(--shift-f); border-color:var(--shift-b); }
+  .dot.half-day .dtri-b{ background:var(--rest-f); border-color:var(--rest-b); }
 
   .grid{ display:grid; grid-template-columns:repeat(7, 1fr); gap:6px; margin-bottom:8px; }
   .dow{ text-align:center; font-size:11px; letter-spacing:0.04em; text-transform:uppercase; color:var(--muted); padding-bottom:4px; }
@@ -191,8 +197,8 @@
 
   <div class="legend">
     <span><span class="dot" style="background:var(--shift-f); border-color:var(--shift-b);"></span>Сутки</span>
-    <span><span class="dot half-day"></span>Дневная</span>
-    <span><span class="dot half"></span>Ночная</span>
+    <span><span class="dot split half-day"><span class="dtri dtri-a"></span><span class="dtri dtri-b"></span></span>Дневная</span>
+    <span><span class="dot split half"><span class="dtri dtri-a"></span><span class="dtri dtri-b"></span></span>Ночная</span>
     <span><span class="dot" style="background:var(--rest-f); border-color:var(--rest-b);"></span>Восстановление</span>
     <span><span class="dot" style="background:var(--free-f); border-color:var(--free-b);"></span>Свободно</span>
     <span>💧 вода</span>
@@ -206,11 +212,13 @@
   <div class="panel detail" id="detailPanel">
     <div class="detail-date" id="detailDate"></div>
 
-    <div class="section-title">Тип дня</div>
-    <div class="toggle-row" id="shiftTypeRow">
-      <div class="toggle-btn" data-shift="shift">Сутки</div>
-      <div class="toggle-btn" data-shift="day">Дневная</div>
-      <div class="toggle-btn" data-shift="night">Ночная</div>
+    <div id="quickShiftSection">
+      <div class="section-title">Тип дня</div>
+      <div class="toggle-row" id="shiftTypeRow">
+        <div class="toggle-btn" data-shift="shift">Сутки</div>
+        <div class="toggle-btn" data-shift="day">Дневная</div>
+        <div class="toggle-btn" data-shift="night">Ночная</div>
+      </div>
     </div>
 
     <div class="toggle-row">
@@ -265,6 +273,17 @@
       </div>
     </div>
     <button class="btn small" id="addPlanBtn">Добавить план</button>
+
+    <div class="row" style="margin-top:14px; align-items:center;">
+      <span style="font-size:12px; color:var(--muted);">Сортировка:</span>
+      <div class="field" style="max-width:180px;">
+        <select id="planSortSelect">
+          <option value="significance">По значимости</option>
+          <option value="alpha">По алфавиту</option>
+          <option value="newest">Сначала новые</option>
+        </select>
+      </div>
+    </div>
     <div class="plan-list" id="planList"></div>
   </div>
 
@@ -283,6 +302,11 @@
 
   <div class="panel">
     <h2>Добавить смену</h2>
+    <div class="row" style="align-items:center; justify-content:space-between; background:var(--paper); padding:8px 10px; border-radius:8px;">
+      <span style="font-size:13px;">Быстрый выбор смены в карточке дня</span>
+      <div class="toggle-btn" id="quickShiftToggle" style="flex:none; padding:6px 14px;">Вкл</div>
+    </div>
+    <p class="sub" style="margin-top:8px;">Удобно, пока распределяете весь график. Когда всё проставлено — выключите, чтобы карточка дня не отвлекала. Смены всегда можно поменять или перенести здесь, в списке ниже.</p>
     <div class="row">
       <div class="field"><label>Дата</label><input type="date" id="shiftDate"></div>
       <div class="field"><label>Тип</label>
@@ -300,6 +324,23 @@
 </div>
 
 <script>
+// Реальное сохранение в браузере устройства (работает на любом хостинге, не только внутри Claude)
+const storage = {
+  async get(key){
+    const v = localStorage.getItem(key);
+    if(v === null) throw new Error('not found');
+    return { key, value: v };
+  },
+  async set(key, value){
+    localStorage.setItem(key, value);
+    return { key, value };
+  },
+  async delete(key){
+    localStorage.removeItem(key);
+    return { key, deleted: true };
+  }
+};
+
 const DOW = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 const CAT_LABEL = {urgent:'Реанимация', important:'Профилактика', other:'Наблюдение'};
 let shifts = {};
@@ -318,16 +359,23 @@ function pluralDays(n){
   return 'дней';
 }
 
+let quickShiftEnabled = true;
+let planSortMode = 'significance';
+
 async function loadState(){
-  try{ const s = await window.storage.get('shifts_v4', false); if(s?.value) shifts = JSON.parse(s.value); }catch(e){}
-  try{ const p = await window.storage.get('plans_v4', false); if(p?.value) plans = JSON.parse(p.value); }catch(e){}
-  plans.forEach(p => { if(!p.type) p.type = 'recurring'; });
-  try{ const d = await window.storage.get('daydata_v4', false); if(d?.value) dayData = JSON.parse(d.value); }catch(e){}
+  try{ const s = await storage.get('shifts_v4', false); if(s?.value) shifts = JSON.parse(s.value); }catch(e){}
+  try{ const p = await storage.get('plans_v4', false); if(p?.value) plans = JSON.parse(p.value); }catch(e){}
+  plans.forEach((p, i) => { if(!p.type) p.type = 'recurring'; if(p.order === undefined) p.order = i; });
+  try{ const d = await storage.get('daydata_v4', false); if(d?.value) dayData = JSON.parse(d.value); }catch(e){}
+  try{ const q = await storage.get('quickshift_v1', false); if(q?.value) quickShiftEnabled = q.value === 'on'; }catch(e){}
+  try{ const so = await storage.get('plansort_v1', false); if(so?.value) planSortMode = so.value; }catch(e){}
 }
 
-async function saveShifts(){ try{ await window.storage.set('shifts_v4', JSON.stringify(shifts), false); }catch(e){} }
-async function savePlans(){ try{ await window.storage.set('plans_v4', JSON.stringify(plans), false); }catch(e){} }
-async function saveDayData(){ try{ await window.storage.set('daydata_v4', JSON.stringify(dayData), false); }catch(e){} }
+async function saveShifts(){ try{ await storage.set('shifts_v4', JSON.stringify(shifts), false); }catch(e){} }
+async function savePlans(){ try{ await storage.set('plans_v4', JSON.stringify(plans), false); }catch(e){} }
+async function saveDayData(){ try{ await storage.set('daydata_v4', JSON.stringify(dayData), false); }catch(e){} }
+async function saveQuickShift(){ try{ await storage.set('quickshift_v1', quickShiftEnabled ? 'on' : 'off', false); }catch(e){} }
+async function savePlanSort(){ try{ await storage.set('plansort_v1', planSortMode, false); }catch(e){} }
 
 function getDay(dateStr){
   if(!dayData[dateStr]) dayData[dateStr] = {selected:[], done:{}, water:false, food:false};
@@ -403,7 +451,12 @@ function suggestDaysForPlan(planId, target){
   const remaining = target - plannedDates.length;
   if(remaining <= 0) return [];
   const today = todayStr();
-  const freeDates = weekDates.filter(d => d >= today && !plannedDates.includes(d));
+  const isUsable = (d) => {
+    const st = dateStatus(d).cls;
+    return st !== 'shift' && st !== 'rest'; // сутки и восстановление исключаем
+  };
+  let freeDates = weekDates.filter(d => d >= today && !plannedDates.includes(d) && isUsable(d));
+  // если хороших дней не хватает — лучше показать честно меньше вариантов, чем ставить на сутки/отдых
   if(freeDates.length === 0) return [];
   if(freeDates.length <= remaining) return freeDates;
   const step = freeDates.length / remaining;
@@ -476,6 +529,7 @@ function renderDetail(){
   document.getElementById('detailDate').textContent = `${d}.${m}.${y}`;
   const dd = getDay(selectedDate);
 
+  document.getElementById('quickShiftSection').style.display = quickShiftEnabled ? '' : 'none';
   const currentShift = shifts[selectedDate] || null;
   document.querySelectorAll('#shiftTypeRow .toggle-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.shift === currentShift);
@@ -571,13 +625,30 @@ function renderShiftList(){
   });
 }
 
+const CAT_RANK = {urgent:0, important:1, other:2};
+function getSortedPlans(){
+  const arr = [...plans];
+  if(planSortMode === 'alpha'){
+    arr.sort((a,b) => a.name.localeCompare(b.name, 'ru'));
+  } else if(planSortMode === 'newest'){
+    arr.sort((a,b) => (b.order||0) - (a.order||0));
+  } else {
+    arr.sort((a,b) => (CAT_RANK[a.cat]-CAT_RANK[b.cat]) || (a.order||0)-(b.order||0));
+  }
+  return arr;
+}
+
 function renderPlanList(){
   const list = document.getElementById('planList');
+  const sortSel = document.getElementById('planSortSelect');
+  if(sortSel) sortSel.value = planSortMode;
   if(plans.length === 0){ list.innerHTML = '<div class="empty-note">Планов пока нет</div>'; return; }
-  list.innerHTML = plans.map(p => `
+  const targetDate = selectedDate || todayStr();
+  list.innerHTML = getSortedPlans().map(p => `
     <div class="plan-item">
       <span class="cat-badge ${p.cat}"></span>
       <span class="name">${p.name}${p.type==='recurring' ? ` <span style="color:var(--muted);font-size:11px;">· ×${p.weeklyTarget||1}/нед</span>` : ' <span style="color:var(--muted);font-size:11px;">· разовая</span>'}</span>
+      <button data-id="${p.id}" class="quickAddPlan" title="Добавить на ${targetDate === todayStr() ? 'сегодня' : 'выбранный день'}">+</button>
       <select data-id="${p.id}" class="catSelect">
         <option value="urgent" ${p.cat==='urgent'?'selected':''}>Реанимация</option>
         <option value="important" ${p.cat==='important'?'selected':''}>Профилактика</option>
@@ -586,6 +657,17 @@ function renderPlanList(){
       <button data-id="${p.id}" class="removePlan">✕</button>
     </div>
   `).join('');
+  list.querySelectorAll('.quickAddPlan').forEach(btn => {
+    btn.onclick = async () => {
+      const dd = getDay(targetDate);
+      if(!dd.selected.includes(btn.dataset.id)) dd.selected.push(btn.dataset.id);
+      await saveDayData();
+      btn.textContent = '✓';
+      setTimeout(() => { btn.textContent = '+'; }, 800);
+      if(selectedDate) renderDetail();
+      renderCalendar();
+    };
+  });
   list.querySelectorAll('.catSelect').forEach(sel => {
     sel.onchange = async () => {
       const p = plans.find(x=>x.id===sel.dataset.id);
@@ -639,7 +721,7 @@ function renderGoalStats(){
     return `<div class="goal-card">
       <div class="top"><span><span class="cat-badge ${p.cat}"></span>${p.name}</span></div>
       <div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div>
-      <div class="goal-count">Цель: ${target} · Запланировано: ${planned} · Осталось: ${remaining} · Выполнено: ${done}</div>
+      <div class="goal-count">Цель: ${target} · Запланировано: ${planned} · Выполнено: ${done}</div>
       <div class="goal-count" style="margin-top:4px;">${hint}</div>
     </div>`;
   }).join('');
@@ -647,7 +729,22 @@ function renderGoalStats(){
 
 function renderAll(){
   renderDowRow(); renderCalendar(); renderShiftList(); renderPlanList(); renderDetail();
+  const qsBtn = document.getElementById('quickShiftToggle');
+  qsBtn.textContent = quickShiftEnabled ? 'Вкл' : 'Выкл';
+  qsBtn.classList.toggle('active', quickShiftEnabled);
 }
+
+document.getElementById('quickShiftToggle').onclick = async () => {
+  quickShiftEnabled = !quickShiftEnabled;
+  await saveQuickShift();
+  renderAll();
+};
+
+document.getElementById('planSortSelect').onchange = async (e) => {
+  planSortMode = e.target.value;
+  await savePlanSort();
+  renderPlanList();
+};
 
 document.getElementById('addShiftBtn').onclick = async () => {
   const date = document.getElementById('shiftDate').value;
@@ -665,7 +762,7 @@ document.getElementById('addPlanBtn').onclick = async () => {
   const targetInput = document.getElementById('newPlanTarget');
   const name = input.value.trim();
   if(!name) return;
-  const plan = {id: uid(), name, cat, type};
+  const plan = {id: uid(), name, cat, type, order: Date.now()};
   if(type === 'recurring'){
     plan.weeklyTarget = parseInt(targetInput.value) || 1;
   }
@@ -734,7 +831,7 @@ document.getElementById('nextMonth').onclick = () => { viewMonth++; if(viewMonth
 
 async function loadTheme(){
   let theme = 'light';
-  try{ const t = await window.storage.get('theme_v1', false); if(t?.value) theme = t.value; }catch(e){}
+  try{ const t = await storage.get('theme_v1', false); if(t?.value) theme = t.value; }catch(e){}
   applyTheme(theme);
 }
 function applyTheme(theme){
@@ -744,7 +841,7 @@ function applyTheme(theme){
 document.getElementById('themeToggle').onclick = async () => {
   const next = document.body.classList.contains('dark') ? 'light' : 'dark';
   applyTheme(next);
-  try{ await window.storage.set('theme_v1', next, false); }catch(e){}
+  try{ await storage.set('theme_v1', next, false); }catch(e){}
 };
 
 (async () => {
